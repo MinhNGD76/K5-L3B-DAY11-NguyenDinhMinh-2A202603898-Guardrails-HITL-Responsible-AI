@@ -123,14 +123,21 @@ async def main() -> None:
             pass_live.append((name, prompt))
         print()
 
-    from core.config import PROVIDER_GEMINI, get_openai_api_key, get_llm_provider
+    from core.config import (
+        PROVIDER_GEMINI,
+        PROVIDER_OPENROUTER,
+        get_llm_provider,
+        get_openai_api_key,
+        get_openrouter_api_key,
+    )
 
     provider = get_llm_provider()
-    key_ok = (
-        os.environ.get("GOOGLE_API_KEY", "").strip()
-        if provider == PROVIDER_GEMINI
-        else get_openai_api_key()
-    )
+    if provider == PROVIDER_GEMINI:
+        key_ok = os.environ.get("GOOGLE_API_KEY", "").strip()
+    elif provider == PROVIDER_OPENROUTER:
+        key_ok = get_openrouter_api_key()
+    else:
+        key_ok = get_openai_api_key()
     if not key_ok:
         print(
             f"No API key for provider={provider} — stopped before live LLM calls.\n"

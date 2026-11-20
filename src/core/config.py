@@ -47,6 +47,8 @@ DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 HARD_OPENAI_MODEL = "gpt-5.6-luna"
 HARD_GEMINI_MODEL = "gemini-3.8-flash"
 
+DEFAULT_OPENROUTER_RED_MODEL = "openai/gpt-6-luna"
+
 # --- Protected data (DEMO) ---
 PROTECTED_DATA_DIR = _ROOT / "data" / "protected"
 PROTECTED_SECRETS_PATH = PROTECTED_DATA_DIR / "vinbank_secrets.json"
@@ -139,11 +141,18 @@ def get_red_provider() -> str:
     ).strip().lower()
     if raw in {"gemini", "google", "adk"}:
         return PROVIDER_GEMINI
+    if raw == PROVIDER_OPENROUTER:
+        return PROVIDER_OPENROUTER
     return PROVIDER_OPENAI
 
 
 def get_red_model() -> str:
     """Model Red Team từ .env (cùng cho default + advance)."""
+    if get_red_provider() == PROVIDER_OPENROUTER:
+        return (
+            os.environ.get("OPENROUTER_RED_MODEL", DEFAULT_OPENROUTER_RED_MODEL).strip()
+            or DEFAULT_OPENROUTER_RED_MODEL
+        )
     if get_red_provider() == PROVIDER_GEMINI:
         return (
             os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).strip()
@@ -170,6 +179,8 @@ def get_openai_api_key() -> str:
 
 
 def red_openai_client_kwargs() -> dict:
+    if get_red_provider() == PROVIDER_OPENROUTER:
+        return blue_client_kwargs()
     return {"api_key": get_openai_api_key() or None}
 
 
@@ -180,7 +191,8 @@ def red_provider_label(tier: str = "advance") -> str:
 
 
 def red_uses_openai_sdk() -> bool:
-    return get_red_provider() == PROVIDER_OPENAI
+    # OpenRouter is OpenAI-compatible, so it shares the OpenAI SDK path.
+    return get_red_provider() in {PROVIDER_OPENAI, PROVIDER_OPENROUTER}
 
 
 def red_uses_gemini() -> bool:
@@ -249,6 +261,8 @@ def setup_api_key():
             os.environ["GOOGLE_API_KEY"] = input("Enter Google API Key (Red): ").strip()
         os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "0"
         print(f"Red / Red Advance  — gemini:{model}")
+    elif red == PROVIDER_OPENROUTER:
+        print(f"Red / Red Advance  — openrouter:{model}")
     else:
         if not get_openai_api_key():
             os.environ["OPENAI_API_KEY"] = input("Enter OpenAI API Key (Red): ").strip()
